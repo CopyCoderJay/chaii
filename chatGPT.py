@@ -232,18 +232,28 @@ if S.hf:
 if "rename_id" not in S: S.rename_id = None
 if "rename_value" not in S: S.rename_value = ""
 if "confirm_delete_id" not in S: S.confirm_delete_id = None
+if "show_token_input" not in S: S.show_token_input = False
 VERSION = "ui-rename-delete+token-ctrl v4"
 
 with st.sidebar:
     st.markdown('<div><h3>🤖 GPT-2 Chat</h3></div>', unsafe_allow_html=True)
     level = st.selectbox("Reasoning Level", ["Low","Medium","High"], index=1, help="Select the reasoning complexity for responses.")
-    # Always allow overriding token from the UI (deployment-friendly)
-    token_input = st.text_input("HF Token", value=S.hf, type="password", help="Paste your Hugging Face or provider API token. This overrides .env/api.txt.")
-    if token_input != S.hf:
-        S.hf = token_input.strip()
-        if S.hf:
-            os.environ["HF_TOKEN"] = S.hf
-    st.caption(f"Token: {'Set' if S.hf else 'Not set'}")
+    # Hide token input if a token is already loaded; allow reveal to change
+    if (S.show_token_input or not S.hf):
+        token_input = st.text_input("HF Token", value=S.hf, type="password", help="Paste your Hugging Face or provider API token. This overrides .env/api.txt.")
+        if token_input != S.hf:
+            S.hf = token_input.strip()
+            if S.hf:
+                os.environ["HF_TOKEN"] = S.hf
+        st.caption(f"Token: {'Set' if S.hf else 'Not set'}")
+        if S.hf and st.button("Hide token input", use_container_width=True):
+            S.show_token_input = False
+            st.rerun()
+    else:
+        st.caption("Token: Set")
+        if st.button("Change token", use_container_width=True):
+            S.show_token_input = True
+            st.rerun()
     save_env = st.checkbox("Save token to .env (local only)")
     if save_env and S.hf and st.button("Save HF_TOKEN", use_container_width=True):
         try:
