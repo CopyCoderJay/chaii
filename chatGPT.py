@@ -218,12 +218,15 @@ if "cur" not in S: S.cur = next(iter(S.conversations), None)
 
 
 if "hf" not in S:
-    S.hf = (
-        os.getenv("HF_TOKEN", "")
-        or _fallback_read_hf_token()
-        or HfFolder.get_token()
-        or ""
-    )
+    try:
+        S.hf = st.secrets["api_keys"]["HF_TOKEN"]
+    except Exception:
+        S.hf = (
+            os.getenv("HF_TOKEN", "")
+            or _fallback_read_hf_token()
+            or HfFolder.get_token()
+            or ""
+        )
 if S.hf:
     os.environ["HF_TOKEN"] = S.hf
 if "rename_id" not in S: S.rename_id = None
