@@ -219,7 +219,7 @@ if "cur" not in S: S.cur = next(iter(S.conversations), None)
 
 if "hf" not in S:
     try:
-        S.hf = st.secrets["api_keys"]["HF_TOKEN"]
+        S.hf = st.secrets["HF_TOKEN"]
     except Exception:
         S.hf = (
             os.getenv("HF_TOKEN", "")
