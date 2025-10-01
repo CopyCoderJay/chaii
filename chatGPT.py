@@ -311,7 +311,10 @@ if not S.hf:
     client = None
 else:
     try:
-        client = InferenceClient(provider="auto", token=S.hf)
+        try:
+            client = InferenceClient(provider="auto", token=S.hf)
+        except TypeError:
+            client = InferenceClient(token=S.hf)
     except Exception as e:
         client = None
         st.error(str(e))
