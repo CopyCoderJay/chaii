@@ -342,32 +342,50 @@ if prompt := st.chat_input("Type your message here..."):
                 prompt_text += "Assistant:"
                 
                 # Use text_generation directly
-                # Use conversational task explicitly; do not fall back to text-generation
+                # Prefer conversational task; on 404 or unsupported, fall back to HF text_generation
                 target_model = "deepseek-ai/DeepSeek-V3-0324"
+                fallback_model = "HuggingFaceH4/zephyr-7b-beta"
                 out = ""
-                if hasattr(client, "chat") and hasattr(client.chat, "completions"):
-                    resp = client.chat.completions.create(
-                        model=target_model,
-                        messages=[
-                            {"role": "system", "content": "You are a helpful assistant."},
-                            {"role": "user", "content": prompt_text},
-                        ],
-                        stream=True,
+                used_fallback = False
+                try:
+                    if hasattr(client, "chat") and hasattr(client.chat, "completions"):
+                        resp = client.chat.completions.create(
+                            model=target_model,
+                            messages=[
+                                {"role": "system", "content": "You are a helpful assistant."},
+                                {"role": "user", "content": prompt_text},
+                            ],
+                            stream=True,
+                            temperature=0.7,
+                            max_tokens=1000,
+                        )
+                        box = st.empty()
+                        for chunk in resp:
+                            delta = (
+                                getattr(chunk, "choices", [None])[0]
+                                and getattr(chunk.choices[0], "delta", None)
+                            )
+                            token_text = (getattr(delta, "content", None) or "") if delta else ""
+                            out += token_text
+                            box.markdown(out + "▌")
+                        box.markdown(out)
+                    else:
+                        raise AttributeError("chat API not available")
+                except Exception as e_conv:
+                    used_fallback = True
+                    out = ""
+                    resp = client.text_generation(
+                        prompt=prompt_text,
+                        model=fallback_model,
                         temperature=0.7,
-                        max_tokens=1000,
+                        max_new_tokens=1000,
+                        stream=True
                     )
                     box = st.empty()
-                    for chunk in resp:
-                        delta = (
-                            getattr(chunk, "choices", [None])[0]
-                            and getattr(chunk.choices[0], "delta", None)
-                        )
-                        token_text = (getattr(delta, "content", None) or "") if delta else ""
-                        out += token_text
+                    for token in resp:
+                        out += token
                         box.markdown(out + "▌")
                     box.markdown(out)
-                else:
-                    raise RuntimeError("Your huggingface_hub version does not support conversational API. Run: pip install -U 'huggingface_hub>=0.26.0'")
                 
                 msgs.append({"role":"assistant","content":out})
                 if len(msgs) == 2: 
